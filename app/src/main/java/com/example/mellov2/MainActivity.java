@@ -141,7 +141,6 @@ public class MainActivity extends AppCompatActivity {
         mImageDrawable.setLevel(0);
 
         final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-
         final TextView PercentFullness = (TextView) findViewById(R.id.fullness_pct);
 
         ScheduledThreadPoolExecutor exec = new ScheduledThreadPoolExecutor(1);
@@ -163,7 +162,7 @@ public class MainActivity extends AppCompatActivity {
                 //store percentage in historical array
                 prefs.edit().putInt(Integer.toString(prefInd),percentBladderFullness).apply();
                 prefs.edit().putLong(Integer.toString(prefInd).concat("T"),date.getTime()).apply();
-                prefInd++;
+
                 //if a bladder voiding has occurred, note the time
                 int avgBefore = (prefs.getInt(Integer.toString(prefInd-5),0)+prefs.getInt(Integer.toString(prefInd-4),0)+prefs.getInt(Integer.toString(prefInd-3),0))/3;
                 int avgAfter = (prefs.getInt(Integer.toString(prefInd-2),0)+prefs.getInt(Integer.toString(prefInd-1),0)+prefs.getInt(Integer.toString(prefInd),0))/3;
@@ -171,6 +170,7 @@ public class MainActivity extends AppCompatActivity {
                 if(prefs.getInt(Integer.toString(prefInd-1),0) > 30 && prefs.getInt(Integer.toString(prefInd),0) < 30){
                     prefs.edit().putLong("last_void_time",prefs.getLong(Integer.toString(prefInd).concat("T"),0)).apply(); //save last void time to preferences
                 }
+                prefInd++;
 
                 //update percentage in UI
                 runOnUiThread(new Runnable() {

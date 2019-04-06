@@ -19,6 +19,7 @@ import com.jjoe64.graphview.series.LineGraphSeries;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.TimeZone;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -44,7 +45,7 @@ public class TrendsStatsFragment extends Fragment {
 
         final GraphView graph = (GraphView) view.findViewById(R.id.graph);
         final TextView timeSince = (TextView) view.findViewById(R.id.time_void_last);
-        TextView timeNext = (TextView) view.findViewById(R.id.time_void_next);
+        final TextView timeNext = (TextView) view.findViewById(R.id.time_void_next);
         TextView avgVoid = (TextView) view.findViewById(R.id.time_void_average);
 
         //set appearance of the graph
@@ -93,29 +94,28 @@ public class TrendsStatsFragment extends Fragment {
 
                 //calculate time since last void
                 Date date = new Date(System.currentTimeMillis());
-                long lastTime = prefs.getLong("last_void_time",0);
+                long lastTime = date.getTime() - prefs.getLong("last_void_time",0)-1_000*60*60*19;
                 DateFormat formatter = new SimpleDateFormat("HH:mm:ss");
-                //formatter.setTimeZone(TimeZone.getTimeZone("UTC-4"));
                 final String dateFormatted = formatter.format(lastTime);
 
                 //calculate time till next void
-
-
+                long nextTime = ((90-prefs.getInt(Integer.toString(prefInd-1),0))/(prefs.getInt(Integer.toString(prefInd-1),0)-prefs.getInt(Integer.toString(prefInd-2),0)))*(prefs.getLong(Integer.toString(prefInd-1).concat("T"),0)-prefs.getLong(Integer.toString(prefInd-2).concat("T"),0))-1_000*60*60*19;
+                final String dateFormatted1 = formatter.format(nextTime);
                 //calculate the average number of voids per day (estimate)
 
 
                 //update GUI
-
                 getActivity().runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
                         timeSince.setText(dateFormatted);
+                        timeNext.setText(dateFormatted1);
                     }
                 });
 
 
             }
-        }, 1, samplePeriod, TimeUnit.SECONDS);
+        }, 0, samplePeriod, TimeUnit.SECONDS);
 
         return view;
     }
