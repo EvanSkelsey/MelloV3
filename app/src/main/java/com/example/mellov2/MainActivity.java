@@ -3,6 +3,7 @@ package com.example.mellov2;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Bundle;
@@ -24,6 +25,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 import java.io.IOException;
+import java.util.Date;
 import java.util.UUID;
 import android.content.Intent;
 
@@ -34,9 +36,10 @@ import android.widget.EditText;
 import android.os.Handler;
 
 public class MainActivity extends AppCompatActivity {
-    //temp buttons
-    Button Pulse, Sense;
-    Byte test;
+
+    //=============================================
+
+    //Bluetooth Initialization
     String address = "98:D3:51:FD:86:53";
     static BluetoothAdapter myBluetooth = null;
     static BluetoothSocket btSocket = null;
@@ -45,8 +48,6 @@ public class MainActivity extends AppCompatActivity {
     //define the upper and lower bounds of our calibrated system
     public static int lowBound = 0;
     public static int upBound = 264;
-
-    //=============================================
 
     //for notifications
     private static String notification_title = "Bladder Fullness Status";
@@ -65,10 +66,13 @@ public class MainActivity extends AppCompatActivity {
 
     //read in value from device
     private int percentBladderFullness = 0;
+    public static int samplePeriod = 2; //sampling period in seconds
+    //public final SharedPreferences pctRecord = this.getSharedPreferences("com.example.mellov2.percents", Context.MODE_PRIVATE); //pctRecord will contain all the percents captured as data
+    //public final SharedPreferences pctTimes = this.getSharedPreferences("com.example.mellov2.pct_times",Context.MODE_PRIVATE); //pctTimes will capture the times at which percentages were captured
+    public static int prefInd = 0;
 
     //for the drop animation
     private ClipDrawable mImageDrawable;
-    private int mLevel = 0;
     private int fromLevel;
     private int toLevel;
     public static final int MAX_LEVEL = 10000;  //******to be updated with maximum ADC value
@@ -96,6 +100,9 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
+
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
@@ -134,6 +141,7 @@ public class MainActivity extends AppCompatActivity {
         mImageDrawable.setLevel(0);
 
         final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+
         final TextView PercentFullness = (TextView) findViewById(R.id.fullness_pct);
 
         ScheduledThreadPoolExecutor exec = new ScheduledThreadPoolExecutor(1);
@@ -146,9 +154,25 @@ public class MainActivity extends AppCompatActivity {
                 boolean switch80Value = prefs.getBoolean("switch_status_80", true);
                 boolean switch100Value = prefs.getBoolean("switch_status_100", true);
 
-                //calculate percentBladderFullness from ADC
+                //get current time
+                Date date = new Date(System.currentTimeMillis());
+
+                //calculate percentBladderFullness -- *****to implement taking ADC value*****
                 percentBladderFullness = (percentBladderFullness+10)%100; //bladder fullness in percent
 
+                //store percentage in historical array
+                prefs.edit().putInt(Integer.toString(prefInd),percentBladderFullness).apply();
+                prefs.edit().putLong(Integer.toString(prefInd).concat("T"),date.getTime()).apply();
+                prefInd++;
+                //if a bladder voiding has occurred, note the time
+                int avgBefore = (prefs.getInt(Integer.toString(prefInd-5),0)+prefs.getInt(Integer.toString(prefInd-4),0)+prefs.getInt(Integer.toString(prefInd-3),0))/3;
+                int avgAfter = (prefs.getInt(Integer.toString(prefInd-2),0)+prefs.getInt(Integer.toString(prefInd-1),0)+prefs.getInt(Integer.toString(prefInd),0))/3;
+                //if(avgAfter< 30 && avgBefore > 30){
+                if(prefs.getInt(Integer.toString(prefInd-1),0) > 30 && prefs.getInt(Integer.toString(prefInd),0) < 30){
+                    prefs.edit().putLong("last_void_time",prefs.getLong(Integer.toString(prefInd).concat("T"),0)).apply(); //save last void time to preferences
+                }
+
+                //update percentage in UI
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
@@ -187,7 +211,7 @@ public class MainActivity extends AppCompatActivity {
                     displayNotification();
                 }
             }
-        }, 0, 1, TimeUnit.SECONDS);
+        }, 0, samplePeriod, TimeUnit.SECONDS);
     }
 
 
