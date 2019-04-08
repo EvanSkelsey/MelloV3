@@ -47,7 +47,7 @@
             android:layout_height="wrap_content"
             android:layout_below="@+id/graph"
             android:layout_marginTop="30dp"
-            android:src="@drawable/trends_stats_fields" />
+            android:src="@drawable/trends_stats_fields_prime" />
 
         <TextView
             android:id="@+id/time_void_last"
@@ -77,7 +77,7 @@
             android:textColor="@color/colorAccent"
             android:textSize="20dp" />
 
-        <TextView
+<!--        <TextView
             android:id="@+id/time_void_average"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -89,7 +89,7 @@
             android:layout_marginBottom="0dp"
             android:text="TextView"
             android:textColor="@color/colorAccent"
-            android:textSize="20dp" />
+            android:textSize="20dp" />-->
     </RelativeLayout>
 
 

@@ -1,29 +1,22 @@
 package com.example.mellov2;
 
-import android.content.Intent;
-import android.media.Image;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentTransaction;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.ImageView;
-
-import java.util.Arrays;
+import android.widget.Toast;
 
 import static com.example.mellov2.MainActivity.highRead;
 import static com.example.mellov2.MainActivity.lowRead;
-import static com.example.mellov2.MainActivity.refRead;
 
 public class CalibrationFragment extends Fragment {
 
     //=============================================
-
-
 
     //=============================================
 
@@ -46,6 +39,8 @@ public class CalibrationFragment extends Fragment {
 
         final ImageView calibrationNextYesCompleteBackground = (ImageView) view.findViewById(R.id.calibration_next_yes_complete_background);
 
+        final ImageView calibrationPleaseWait = (ImageView) view.findViewById(R.id.calibration_please_wait);
+
         calibrationNextBackground.setVisibility(View.INVISIBLE);
         yesCalibrateButton.setVisibility(View.INVISIBLE);
         noCalibrateButton.setVisibility(View.INVISIBLE);
@@ -54,6 +49,7 @@ public class CalibrationFragment extends Fragment {
         calibrationNextYesCompleteBackground.setVisibility(View.INVISIBLE);
         doneCalibrateButton.setVisibility(View.INVISIBLE);
         okCalibrateButton.setVisibility(View.INVISIBLE);
+        calibrationPleaseWait.setVisibility(View.INVISIBLE);
 
         //start button appears
         startCalibrateButton.setOnClickListener(new View.OnClickListener() {
@@ -68,17 +64,21 @@ public class CalibrationFragment extends Fragment {
                 yesCalibrateButton.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
+
+                        getActivity().runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                calibrationPleaseWait.setVisibility(View.VISIBLE);
+                            }
+                        });
                         calibrationNextBackground.setVisibility(View.INVISIBLE);
                         yesCalibrateButton.setVisibility(View.INVISIBLE);
                         noCalibrateButton.setVisibility(View.INVISIBLE);
 
-                        int i,j;
-                        //perform full bladder calibration
-                        for(i=0;i<4;i++){ //i for sensors
-                            for(j=0;j<5;j++){ //j for LEDs
-                                highRead[i][j] = MainActivity.takeMeasure(i+1,j+1);
-                            }
-                        }
+
+
+                        highRead = MainActivity.takeMeasure();
+//                        Toast.makeText(getActivity().getApplicationContext(), Integer.toString(highRead), Toast.LENGTH_LONG).show();
 
                         calibrationNextYesBackground.setVisibility(View.VISIBLE);
                         doneCalibrateButton.setVisibility(View.VISIBLE);
@@ -88,30 +88,11 @@ public class CalibrationFragment extends Fragment {
                             public void onClick(View v) {
                                 calibrationNextYesBackground.setVisibility(View.INVISIBLE);
                                 doneCalibrateButton.setVisibility(View.INVISIBLE);
+                                calibrationPleaseWait.setVisibility(View.INVISIBLE);
 
-                                int i,j,k;
-                                //zero out calibration array
-                                Arrays.fill(refRead,0);
-                                //perform empty calibration
-                                for(i=0;i<4;i++){ //i for sensors
-                                    for(j=0;j<5;j++){ //j for LEDs
-                                        lowRead[i][j] = MainActivity.takeMeasure(i+1,j+1);
-                                    }
-                                }
 
-                                //calculate the best performing pairs and save them to refRead
-                                for(i=0;i<4;i++){ //i for sensor
-                                    for(j=0;j<5;i++){ //j for LEDs
-                                        for(k=0;k<5;k++){ //k to increment through refRed
-                                            if((lowRead[i][j]-highRead[i][j]) > (refRead[3][k]-refRead[2][k])){
-                                                refRead[0][k] = j; //assign LED number
-                                                refRead[1][k] = i;  //assign sensor number
-                                                refRead[2][k] = highRead[i][j];  //assign the full reading
-                                                refRead[3][k] = lowRead[i][j];   //assign the low/empty reading
-                                            }
-                                        }
-                                    }
-                                }
+                                lowRead = MainActivity.takeMeasure();
+//                                Toast.makeText(getActivity().getApplicationContext(), Integer.toString(lowRead), Toast.LENGTH_LONG).show();
 
                                 calibrationNextYesCompleteBackground.setVisibility(View.VISIBLE);
 //                                okCalibrateButton.setVisibility(View.VISIBLE);
@@ -122,7 +103,6 @@ public class CalibrationFragment extends Fragment {
 //
 //                                    }
 //                                });
-
                             }
                         });
                     }
@@ -152,8 +132,6 @@ public class CalibrationFragment extends Fragment {
             }
         });
         return view;
-
     }
-
 }
 

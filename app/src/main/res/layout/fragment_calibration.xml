@@ -11,7 +11,9 @@
         android:id="@+id/calibration_white_background"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@color/white"/>
+        android:background="@color/white"
+        tools:layout_editor_absoluteX="0dp"
+        tools:layout_editor_absoluteY="126dp" />
 
     <ImageView
         android:id="@+id/header"
@@ -123,6 +125,15 @@
         android:layout_marginTop="20dp"
         android:src="@drawable/calibration_start_yes_complete"
         app:layout_constraintTop_toBottomOf="@+id/header" />
+
+    <ImageView
+        android:id="@+id/calibration_please_wait"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="520dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:srcCompat="@drawable/please_wait" />
 
 
 </android.support.constraint.ConstraintLayout>

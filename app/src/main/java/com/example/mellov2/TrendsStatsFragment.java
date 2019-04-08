@@ -19,21 +19,16 @@ import com.jjoe64.graphview.series.LineGraphSeries;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
 import java.util.Date;
-import java.util.TimeZone;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import static com.example.mellov2.MainActivity.samplePeriod;
 import static com.example.mellov2.MainActivity.prefInd;
-//import com.example.mellov2.MainActivity.prefs;
 
 public class TrendsStatsFragment extends Fragment {
 
     //=============================================
-
-
 
     //=============================================
 
@@ -46,7 +41,6 @@ public class TrendsStatsFragment extends Fragment {
         final GraphView graph = (GraphView) view.findViewById(R.id.graph);
         final TextView timeSince = (TextView) view.findViewById(R.id.time_void_last);
         final TextView timeNext = (TextView) view.findViewById(R.id.time_void_next);
-        TextView avgVoid = (TextView) view.findViewById(R.id.time_void_average);
 
         //set appearance of the graph
         GridLabelRenderer gridLabel = graph.getGridLabelRenderer();
@@ -66,10 +60,8 @@ public class TrendsStatsFragment extends Fragment {
         }
 
         LineGraphSeries<DataPoint> series = new LineGraphSeries<>(points);
-
         series.setColor(Color.LTGRAY);
         series.setThickness(8);
-
         graph.addSeries(series);
 
         ScheduledThreadPoolExecutor exec1 = new ScheduledThreadPoolExecutor(1);
@@ -83,13 +75,12 @@ public class TrendsStatsFragment extends Fragment {
 
                 DataPoint[] points = new DataPoint[13];
                 for (int i = 0; i < 13; i++) {
-                    points[12-i] = new DataPoint(12-i,prefs.getInt(Integer.toString(prefInd-i),0));
+                    points[12-i] = new DataPoint(12-i,prefs.getInt(Integer.toString(prefInd-i-1),0));
                 }
 
                 LineGraphSeries<DataPoint> series = new LineGraphSeries<>(points);
                 series.setColor(Color.LTGRAY);
                 series.setThickness(8);
-
                 graph.addSeries(series);
 
                 //calculate time since last void
@@ -101,22 +92,19 @@ public class TrendsStatsFragment extends Fragment {
                 //calculate time till next void
                 long nextTime = ((90-prefs.getInt(Integer.toString(prefInd-1),0))/(prefs.getInt(Integer.toString(prefInd-1),0)-prefs.getInt(Integer.toString(prefInd-2),0)))*(prefs.getLong(Integer.toString(prefInd-1).concat("T"),0)-prefs.getLong(Integer.toString(prefInd-2).concat("T"),0))-1_000*60*60*19;
                 final String dateFormatted1 = formatter.format(nextTime);
-                //calculate the average number of voids per day (estimate)
-
 
                 //update GUI
                 getActivity().runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
                         timeSince.setText(dateFormatted);
-                        timeNext.setText(dateFormatted1);
+                        if(prefs.getInt(Integer.toString(prefInd-1),0) > prefs.getInt(Integer.toString(prefInd-2),0)) { //only update field if bladder is filling
+                            timeNext.setText(dateFormatted1);
+                        }
                     }
                 });
-
-
             }
         }, 0, samplePeriod, TimeUnit.SECONDS);
-
         return view;
     }
 }

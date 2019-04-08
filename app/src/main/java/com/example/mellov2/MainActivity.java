@@ -45,39 +45,25 @@ public class MainActivity extends AppCompatActivity {
     static BluetoothSocket btSocket = null;
     static final UUID myUUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
 
-    //define the upper and lower bounds of our calibrated system
-    public static int lowBound = 0;
-    public static int upBound = 264;
-
     //for notifications
     private static String notification_title = "Bladder Fullness Status";
     private String notification_content;
     private final String CHANNEL_ID = "mello_notifications";
     private final int NOTIFICATION_ID = 001;
 
-    //define arrays used in calibration
-    public static int[][] lowRead = new int[4][5];
-    public static int[][] highRead = new int[4][5];
-    public static int[][] refRead = new int[4][5]; //these will store the results used in the actual calculations
-        //row 1 -> LED
-        //row 2 -> Sensor
-        //row 3 -> full reading (min value)
-        //row 4 -> empty reading (max value)
-
     //read in value from device
     private int percentBladderFullness = 0;
-    public static int samplePeriod = 2; //sampling period in seconds
-    //public final SharedPreferences pctRecord = this.getSharedPreferences("com.example.mellov2.percents", Context.MODE_PRIVATE); //pctRecord will contain all the percents captured as data
-    //public final SharedPreferences pctTimes = this.getSharedPreferences("com.example.mellov2.pct_times",Context.MODE_PRIVATE); //pctTimes will capture the times at which percentages were captured
+    private double percentRaw = 0.0;
+    public static int samplePeriod = 5;//sampling period in seconds
     public static int prefInd = 0;
+    public static int highRead = 0;
+    public static int lowRead = 255;
 
     //for the drop animation
     private ClipDrawable mImageDrawable;
     private int fromLevel;
     private int toLevel;
     public static final int MAX_LEVEL = 10000;  //******to be updated with maximum ADC value
-    public static final int LEVEL_DIFF = 200;   //minimum ADC value
-    public static final int DELAY = 0;
 
     //to move progress upwards
     private Handler mUpHandler = new Handler();
@@ -100,8 +86,6 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-
-
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
@@ -144,6 +128,7 @@ public class MainActivity extends AppCompatActivity {
         final TextView PercentFullness = (TextView) findViewById(R.id.fullness_pct);
 
         ScheduledThreadPoolExecutor exec = new ScheduledThreadPoolExecutor(1);
+//        Toast.makeText(getApplicationContext(), "I'm not dead", Toast.LENGTH_LONG).show();
         exec.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
@@ -156,16 +141,21 @@ public class MainActivity extends AppCompatActivity {
                 //get current time
                 Date date = new Date(System.currentTimeMillis());
 
-                //calculate percentBladderFullness -- *****to implement taking ADC value*****
+                //counter for testing app
                 percentBladderFullness = (percentBladderFullness+10)%100; //bladder fullness in percent
+                //percentRaw = (highRead + 10)%lowRead;
+
+                //calculate percentBladderFullness
+                //percentRaw = 100*(lowRead-takeMeasure())/(lowRead-highRead);
+                //percentBladderFullness = (int)percentRaw;
 
                 //store percentage in historical array
                 prefs.edit().putInt(Integer.toString(prefInd),percentBladderFullness).apply();
                 prefs.edit().putLong(Integer.toString(prefInd).concat("T"),date.getTime()).apply();
 
                 //if a bladder voiding has occurred, note the time
-                int avgBefore = (prefs.getInt(Integer.toString(prefInd-5),0)+prefs.getInt(Integer.toString(prefInd-4),0)+prefs.getInt(Integer.toString(prefInd-3),0))/3;
-                int avgAfter = (prefs.getInt(Integer.toString(prefInd-2),0)+prefs.getInt(Integer.toString(prefInd-1),0)+prefs.getInt(Integer.toString(prefInd),0))/3;
+                //int avgBefore = (prefs.getInt(Integer.toString(prefInd-5),0)+prefs.getInt(Integer.toString(prefInd-4),0)+prefs.getInt(Integer.toString(prefInd-3),0))/3;
+                //int avgAfter = (prefs.getInt(Integer.toString(prefInd-2),0)+prefs.getInt(Integer.toString(prefInd-1),0)+prefs.getInt(Integer.toString(prefInd),0))/3;
                 //if(avgAfter< 30 && avgBefore > 30){
                 if(prefs.getInt(Integer.toString(prefInd-1),0) > 30 && prefs.getInt(Integer.toString(prefInd),0) < 30){
                     prefs.edit().putLong("last_void_time",prefs.getLong(Integer.toString(prefInd).concat("T"),0)).apply(); //save last void time to preferences
@@ -182,6 +172,13 @@ public class MainActivity extends AppCompatActivity {
 
                 //round to nearest 10
                 percentBladderFullness = 10*(Math.round(percentBladderFullness/10));
+
+                if(percentBladderFullness > 100){
+                    percentBladderFullness = 100;
+                }
+                if(percentBladderFullness < 0){
+                    percentBladderFullness = 0;
+                }
 
                 //format bladder fullness into position notation
                 int temp_level = (percentBladderFullness*MAX_LEVEL)/100;
@@ -213,7 +210,6 @@ public class MainActivity extends AppCompatActivity {
             }
         }, 0, samplePeriod, TimeUnit.SECONDS);
     }
-
 
     public TrendsStatsFragment trendsStatsFragment = new TrendsStatsFragment();
     public CalibrationFragment calibrationFragment = new CalibrationFragment();
@@ -288,149 +284,56 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
-    public static int takeMeasure(int LED, int Sens){
-        //store initial buffer value
-        int curr = Integer.parseInt(recVolt().replace("\n","").replace("\r","").replace(" ","")); //clean up received bit
+   public static int takeMeasure() {
+        int summer = 0;
+        for (int g=0;g<3;g++){
 
-        //send command to micro
-        if(Sens == 1){
-            pulseLED(Integer.toString(LED).concat("A"));
-        }else if(Sens == 2){
-            pulseLED(Integer.toString(LED).concat("B"));
-        }else if(Sens == 3){
-            pulseLED(Integer.toString(LED).concat("C"));
-        }else if(Sens == 4){
-            pulseLED(Integer.toString(LED).concat("D"));
-        }else{
-            //msg("Error Code : 1AA43");
-        }
-
-        //wait until the value in the buffer changes
-        while(curr == Integer.parseInt(recVolt().replace("\n","").replace("\r","").replace(" ",""))){
+            if (btSocket != null) {
+                try{
+                    btSocket.getOutputStream().write((byte)0xFF); //11111111
+                } catch (IOException e) {
+                    //msg("Error");
+                }
+            }
+            //wait until the value in the buffer changes
             try{
-                TimeUnit.MILLISECONDS.sleep(1);
+                TimeUnit.SECONDS.sleep(1);
             }catch(InterruptedException e){
                 //wait
             }
-        }
 
-        //return integer stored in the buffer
-        return Integer.parseInt(recVolt().replace("\n","").replace("\r","").replace(" ",""));
+            //add new values to sum
+            summer += (int) recVolt();
+        }
+        //return average of 4 measurements
+        return summer/3;
     }
 
 
-    public static void pulseLED(String LEDnum) { //method to pulse a specific LED to observe its effect
-        if (btSocket != null) {
-            try {
-                switch (LEDnum) {
-                    case "1A": //pulse LED 1, get reading from sensor 1/A
-                        //btSocket.getOutputStream().write("1".getBytes());
-                        btSocket.getOutputStream().write((byte)0x11); //00010001
-                        break;
-                    case "1B": //pulse LED 1, get reading from sensor 2/B
-                        btSocket.getOutputStream().write((byte)0x12); //00010010
-                        break;
-                    case "1C": //pulse LED 1, get reading from sensor 3/C
-                        btSocket.getOutputStream().write((byte)0x13); //00010011
-                        break;
-                    case "1D": //pulse LED 1, get reading from sensor 4/D
-                        btSocket.getOutputStream().write((byte)0x14); //00010100
-                        break;
-                    case "2A": //pulse LED 2, get reading from sensor 1/A
-                        btSocket.getOutputStream().write((byte)0x21); //00100001
-                        break;
-                    case "2B": //pulse LED 2, get reading from sensor 2/B
-                        btSocket.getOutputStream().write((byte)0x22); //00100010
-                        break;
-                    case "2C": //pulse LED 2, get reading from sensor 3/C
-                        btSocket.getOutputStream().write((byte)0x23); //00100011
-                        break;
-                    case "2D": //pulse LED 2, get reading from sensor 4/D
-                        btSocket.getOutputStream().write((byte)0x24); //00100100
-                        break;
-                    case "3A": //pulse LED 3, get reading from sensor 1/A
-                        btSocket.getOutputStream().write((byte)0x31); //00110001
-                        break;
-                    case "3B":  //pulse LED 3, get reading from sensor 2/B
-                        btSocket.getOutputStream().write((byte)0x32); //00110010
-                        break;
-                    case "3C":  //pulse LED 3, get reading from sensor 3/C
-                        btSocket.getOutputStream().write((byte)0x33); //00110011
-                        break;
-                    case "3D":  //pulse LED 3, get reading from sensor 4/D
-                        btSocket.getOutputStream().write((byte)0x34); //00110100
-                        break;
-                    case "4A":  //pulse LED 4, get reading from sensor 1/A
-                        btSocket.getOutputStream().write((byte)0x41); //01000001
-                        break;
-                    case "4B": //pulse LED 4, get reading from sensor 2/B
-                        btSocket.getOutputStream().write((byte)0x42); //01000010
-                        break;
-                    case "4C": //pulse LED 4, get reading from sensor 3/C
-                        btSocket.getOutputStream().write((byte)0x43); //01000011
-                        break;
-                    case "4D": //pulse LED 4, get reading from sensor 4/D
-                        btSocket.getOutputStream().write((byte)0x44); //01000100
-                        break;
-                    case "5A": //pulse LED 5, get reading from sensor 1/A
-                        btSocket.getOutputStream().write((byte)0x51); //01010001
-                        break;
-                    case "5B": //pulse LED 5, get reading from sensor 2/B
-                        btSocket.getOutputStream().write((byte)0x52); //01010010
-                        break;
-                    case "5C": //pulse LED 5, get reading from sensor 3/C
-                        btSocket.getOutputStream().write((byte)0x53); //01010011
-                        break;
-                    case "5D": //pulse LED 5, get reading from sensor 4/D
-                        btSocket.getOutputStream().write((byte)0x54); //01010100
-                        break;
-                    default:
-                        btSocket.getOutputStream().write(0xFF); //11111111
-                        break;
-                }
-            } catch (IOException e) {
-                //msg("Error");
-            }
-        }
-    }
-
-    public static String recVolt() {
+    public static int recVolt() {
         byte[] buffer = null;
-        buffer = new byte[7];
+        buffer = new byte[1];
+        int summer1 = 0;
+
         try {
-            int len = btSocket.getInputStream().read(buffer,0,3);
-            String text = new String(buffer, 0, len);
-            return text;
+            int len = btSocket.getInputStream().read(buffer,0,1);
+
+            return (int) buffer[0];
         } catch (IOException e) {
             //something happened
-            //msg("error");
-            return "error";
+            return -1;
         }
     }
 
     private void doTheUpAnimation(int fromLevel, int toLevel){
         mImageDrawable.setLevel(toLevel);
-        //TextView PercentFullness = (TextView) findViewById(R.id.fullness_pct);
-        //PercentFullness.setText(percentBladderFullness); //update percent field
-        //if(mLevel<=toLevel){
-        //    mUpHandler.postDelayed(animateUpImage, DELAY);
-        //}else{
-        //    mUpHandler.removeCallbacks(animateUpImage);
-         //   MainActivity.this.fromLevel = toLevel;
-        //}
     }
 
     private void doTheDownAnimation(int fromLevel, int toLevel){
         mImageDrawable.setLevel(toLevel);
-        //if (mLevel >= toLevel){
-        //    mDownHandler.postDelayed(animateDownImage,DELAY);
-        //}else{
-        //    mDownHandler.removeCallbacks(animateDownImage);
-        //    MainActivity.this.fromLevel = toLevel;
-        //}
     }
 
-    private void msg(String s) {
+    public void msg(String s) {
         Toast.makeText(getApplicationContext(), s, Toast.LENGTH_LONG).show();
     }
 
