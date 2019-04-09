@@ -1,4 +1,4 @@
-package com.example.mellov2;
+package com.boss.mellov2;
 
 import android.content.SharedPreferences;
 import android.graphics.Color;
@@ -23,8 +23,10 @@ import java.util.Date;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-import static com.example.mellov2.MainActivity.samplePeriod;
-import static com.example.mellov2.MainActivity.prefInd;
+import static com.boss.mellov2.MainActivity.samplePeriod;
+//import static com.boss.mellov2.MainActivity.prefInd;
+import static com.boss.mellov2.MainActivity.graphReadings;
+import static com.boss.mellov2.MainActivity.graphTimes;
 
 public class TrendsStatsFragment extends Fragment {
 
@@ -54,16 +56,14 @@ public class TrendsStatsFragment extends Fragment {
         graph.getViewport().setMaxX(13);
 
         //set initial data points
-        DataPoint[] points = new DataPoint[13];
-        for (int i = 0; i < points.length; i++) {
-            points[i] = new DataPoint(i, 0);
-        }
+        //DataPoint[] points = new DataPoint[13];
 
-        LineGraphSeries<DataPoint> series = new LineGraphSeries<>(points);
-        series.setColor(Color.LTGRAY);
-        series.setThickness(8);
-        graph.addSeries(series);
+        //LineGraphSeries<DataPoint> series =
+        //series.setColor(Color.LTGRAY);
+        //series.setThickness(8);
+        //graph.addSeries(series);
 
+        /////////////////////
         ScheduledThreadPoolExecutor exec1 = new ScheduledThreadPoolExecutor(1);
         exec1.scheduleAtFixedRate(new Runnable() {
             @Override
@@ -75,7 +75,7 @@ public class TrendsStatsFragment extends Fragment {
 
                 DataPoint[] points = new DataPoint[13];
                 for (int i = 0; i < 13; i++) {
-                    points[12-i] = new DataPoint(12-i,prefs.getInt(Integer.toString(prefInd-i-1),0));
+                    points[i] = new DataPoint(i,graphReadings[i]);
                 }
 
                 LineGraphSeries<DataPoint> series = new LineGraphSeries<>(points);
@@ -90,7 +90,7 @@ public class TrendsStatsFragment extends Fragment {
                 final String dateFormatted = formatter.format(lastTime);
 
                 //calculate time till next void
-                long nextTime = ((90-prefs.getInt(Integer.toString(prefInd-1),0))/(prefs.getInt(Integer.toString(prefInd-1),0)-prefs.getInt(Integer.toString(prefInd-2),0)))*(prefs.getLong(Integer.toString(prefInd-1).concat("T"),0)-prefs.getLong(Integer.toString(prefInd-2).concat("T"),0))-1_000*60*60*19;
+                long nextTime = ((90-graphReadings[12])/(graphReadings[12]-graphReadings[11]))*(graphTimes[12] - graphTimes[11])-1_000*60*60*19;
                 final String dateFormatted1 = formatter.format(nextTime);
 
                 //update GUI
@@ -98,13 +98,15 @@ public class TrendsStatsFragment extends Fragment {
                     @Override
                     public void run() {
                         timeSince.setText(dateFormatted);
-                        if(prefs.getInt(Integer.toString(prefInd-1),0) > prefs.getInt(Integer.toString(prefInd-2),0)) { //only update field if bladder is filling
+                        if(graphReadings[12] > graphReadings [11]){//only update field if bladder is filling
                             timeNext.setText(dateFormatted1);
                         }
                     }
                 });
             }
         }, 0, samplePeriod, TimeUnit.SECONDS);
+
+
         return view;
     }
 }

@@ -1,4 +1,4 @@
-package com.example.mellov2;
+package com.boss.mellov2;
 
 import android.content.Context;
 import android.support.test.InstrumentationRegistry;
@@ -21,6 +21,6 @@ public class ExampleInstrumentedTest {
         // Context of the app under test.
         Context appContext = InstrumentationRegistry.getTargetContext();
 
-        assertEquals("com.example.mellov2", appContext.getPackageName());
+        assertEquals("com.boss.mellov2", appContext.getPackageName());
     }
 }

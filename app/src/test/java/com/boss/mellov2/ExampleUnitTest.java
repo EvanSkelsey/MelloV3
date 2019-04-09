@@ -1,4 +1,4 @@
-package com.example.mellov2;
+package com.boss.mellov2;
 
 import org.junit.Test;
 

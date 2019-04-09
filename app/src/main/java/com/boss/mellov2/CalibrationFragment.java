@@ -1,4 +1,4 @@
-package com.example.mellov2;
+package com.boss.mellov2;
 
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -9,10 +9,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.ImageView;
-import android.widget.Toast;
 
-import static com.example.mellov2.MainActivity.highRead;
-import static com.example.mellov2.MainActivity.lowRead;
+import static com.boss.mellov2.MainActivity.highRead;
+import static com.boss.mellov2.MainActivity.lowRead;
 
 public class CalibrationFragment extends Fragment {
 
@@ -65,12 +64,12 @@ public class CalibrationFragment extends Fragment {
                     @Override
                     public void onClick(View v) {
 
-                        getActivity().runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                calibrationPleaseWait.setVisibility(View.VISIBLE);
-                            }
-                        });
+//                        getActivity().runOnUiThread(new Runnable() {
+//                            @Override
+//                            public void run() {
+//                                calibrationPleaseWait.setVisibility(View.VISIBLE);
+//                            }
+//                        });
                         calibrationNextBackground.setVisibility(View.INVISIBLE);
                         yesCalibrateButton.setVisibility(View.INVISIBLE);
                         noCalibrateButton.setVisibility(View.INVISIBLE);
@@ -88,7 +87,7 @@ public class CalibrationFragment extends Fragment {
                             public void onClick(View v) {
                                 calibrationNextYesBackground.setVisibility(View.INVISIBLE);
                                 doneCalibrateButton.setVisibility(View.INVISIBLE);
-                                calibrationPleaseWait.setVisibility(View.INVISIBLE);
+//                                calibrationPleaseWait.setVisibility(View.INVISIBLE);
 
 
                                 lowRead = MainActivity.takeMeasure();

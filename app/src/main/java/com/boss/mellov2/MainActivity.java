@@ -1,23 +1,19 @@
-package com.example.mellov2;
+package com.boss.mellov2;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
-import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.design.widget.BottomNavigationView;
-import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.view.MenuItem;
-import android.view.View;
-import android.widget.Button;
 import android.bluetooth.BluetoothSocket;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -32,8 +28,10 @@ import android.content.Intent;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import android.graphics.drawable.ClipDrawable;
-import android.widget.EditText;
 import android.os.Handler;
+
+import com.jjoe64.graphview.series.DataPoint;
+import com.jjoe64.graphview.series.LineGraphSeries;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -54,7 +52,7 @@ public class MainActivity extends AppCompatActivity {
     //read in value from device
     private int percentBladderFullness = 0;
     private double percentRaw = 0.0;
-    public static int samplePeriod = 5;//sampling period in seconds
+    public static int samplePeriod = 4;//sampling period in seconds
     public static int prefInd = 0;
     public static int highRead = 0;
     public static int lowRead = 255;
@@ -82,6 +80,11 @@ public class MainActivity extends AppCompatActivity {
             doTheDownAnimation(fromLevel, toLevel);
         }
     };
+
+    //graph
+    public static int [] graphReadings = {0,0,0,0,0,0,0,0,0,0,0,0,0};
+    public static long [] graphTimes = {0,0,0,0,0,0,0,0,0,0,0,0,0};
+
     //=============================================
 
     @Override
@@ -127,8 +130,10 @@ public class MainActivity extends AppCompatActivity {
         final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         final TextView PercentFullness = (TextView) findViewById(R.id.fullness_pct);
 
+
+        // graph
+
         ScheduledThreadPoolExecutor exec = new ScheduledThreadPoolExecutor(1);
-//        Toast.makeText(getApplicationContext(), "I'm not dead", Toast.LENGTH_LONG).show();
         exec.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
@@ -142,12 +147,43 @@ public class MainActivity extends AppCompatActivity {
                 Date date = new Date(System.currentTimeMillis());
 
                 //counter for testing app
-                percentBladderFullness = (percentBladderFullness+10)%100; //bladder fullness in percent
-                //percentRaw = (highRead + 10)%lowRead;
+//                percentBladderFullness = (percentBladderFullness+10)%100; //bladder fullness in percent
 
                 //calculate percentBladderFullness
-                //percentRaw = 100*(lowRead-takeMeasure())/(lowRead-highRead);
-                //percentBladderFullness = (int)percentRaw;
+                percentRaw = 100*(lowRead-takeMeasure())/(lowRead-highRead);
+                percentBladderFullness = (int) percentRaw;
+
+
+//                runOnUiThread(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        Toast.makeText(getApplicationContext(), "sample", Toast.LENGTH_LONG).show();
+//
+//                    }
+//                });
+
+                if(percentBladderFullness > 100){
+                    percentBladderFullness = 100;
+                }
+                if(percentBladderFullness < 0){
+                    percentBladderFullness = 0;
+                }
+
+                //mSeries.appendData(new DataPoint(2, percentBladderFullness), true, 13);
+
+                //store data in the data array
+                   //shift array elements one to the right
+                for(int i=0;i<12;i++){
+                    graphReadings[i] = graphReadings[i+1];
+                    graphTimes[i] = graphTimes[i+1];
+                }
+                   //append latest data to the array
+                graphReadings[12] = percentBladderFullness;
+                graphTimes[12] = date.getTime();
+
+
+
+                /*  BELOW IS OLD PREFERENCE BASED CODE
 
                 //store percentage in historical array
                 prefs.edit().putInt(Integer.toString(prefInd),percentBladderFullness).apply();
@@ -157,28 +193,29 @@ public class MainActivity extends AppCompatActivity {
                 //int avgBefore = (prefs.getInt(Integer.toString(prefInd-5),0)+prefs.getInt(Integer.toString(prefInd-4),0)+prefs.getInt(Integer.toString(prefInd-3),0))/3;
                 //int avgAfter = (prefs.getInt(Integer.toString(prefInd-2),0)+prefs.getInt(Integer.toString(prefInd-1),0)+prefs.getInt(Integer.toString(prefInd),0))/3;
                 //if(avgAfter< 30 && avgBefore > 30){
-                if(prefs.getInt(Integer.toString(prefInd-1),0) > 30 && prefs.getInt(Integer.toString(prefInd),0) < 30){
+
+                */
+
+
+                if(graphReadings[11] > 30 && graphReadings[12] < 30){
                     prefs.edit().putLong("last_void_time",prefs.getLong(Integer.toString(prefInd).concat("T"),0)).apply(); //save last void time to preferences
                 }
-                prefInd++;
+
+
+                //prefInd++;
+
 
                 //update percentage in UI
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
+
                         PercentFullness.setText(Integer.toString(percentBladderFullness).concat("%")); //update percent field
                     }
                 });
 
                 //round to nearest 10
                 percentBladderFullness = 10*(Math.round(percentBladderFullness/10));
-
-                if(percentBladderFullness > 100){
-                    percentBladderFullness = 100;
-                }
-                if(percentBladderFullness < 0){
-                    percentBladderFullness = 0;
-                }
 
                 //format bladder fullness into position notation
                 int temp_level = (percentBladderFullness*MAX_LEVEL)/100;
@@ -245,7 +282,10 @@ public class MainActivity extends AppCompatActivity {
                         if (settingsFragment.isAdded()) {
                             ft.hide(settingsFragment);
                         }
-                        ft.show(trendsStatsFragment);
+//                        ft.show(trendsStatsFragment);
+                        ft.remove(trendsStatsFragment);
+                        trendsStatsFragment = new TrendsStatsFragment();
+                        ft.add(R.id.main_container, trendsStatsFragment);
                     }
                     ft.commit();
                     return true;
